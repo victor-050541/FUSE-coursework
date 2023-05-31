@@ -16,38 +16,38 @@
 #define block_size 1024
 
 typedef struct superblock {
-	char datablocks[block_size*100];		//общее число блоков данных
-	char data_bitmap[105];      			//массив доступных номеров блоков данных
-	char inode_bitmap[105];   				//массив доступных номеров инодов
+	char datablocks[block_size*100];//общее число блоков данных
+	char data_bitmap[105];  //массив доступных номеров блоков данных
+	char inode_bitmap[105]; //массив доступных номеров инодов
 } superblock;
 
 typedef struct inode {
-	int datablocks[16];            //номер блока данных, на который указывает индекс
+	int datablocks[16]; //номер блока данных, на который указывает индекс
 	int number;
-	int blocks;                    //==количество блоков, на которые указывает конкретный индекс
-	//int link;                    //==количество ссылок
-	int size;                      //==размер файла/каталога
+	int blocks;  //==количество блоков, на которые указывает конкретный индекс
+	//int link;  //==количество ссылок
+	int size;    //==размер файла/каталога
 } inode;
 
 typedef struct filetype {
 	int valid;
 	char test[10];
 	char path[100];
-	char name[100];           //имя
-	inode *inum;              //инод число
+	char name[100]; //имя
+	inode *inum;  //инод число
 	struct filetype ** children;
 	int num_children;
 	int num_links;
 	struct filetype * parent;
-	char type[20];                  //==расширение файла
-	mode_t permissions;		        // Разрешения
-	uid_t user_id;		            // userid
-	gid_t group_id;		            // groupid
-	time_t a_time;                  // Время доступа
-	time_t m_time;                  // Время изменения
-	time_t c_time;                  // Время изменения статуса
-	time_t b_time;                  // время создания
-	off_t size;                     // Размер узла
+	char type[20]; //==расширение файла
+	mode_t permissions;	// Разрешения
+	uid_t user_id;	// userid
+	gid_t group_id;	// groupid
+	time_t a_time;  // Время доступа
+	time_t m_time;  // Время изменения
+	time_t c_time;  // Время изменения статуса
+	time_t b_time;  // Время создания
+	off_t size;     // Размер узла
 
 	int datablocks[16];
 	int number;
@@ -85,7 +85,6 @@ void tree_to_array(filetype * queue, int * front, int * rear, int * index){
 	if(*index < 6){
 
 		if(curr_node.valid){
-			int n = 0;
 			int i;
 			for(i = 0; i < curr_node.num_children; i++){
 				if(*rear < *front)
@@ -142,11 +141,13 @@ int save_contents(){
 	fclose(fd1);
 
 	printf("\n");
+	
+	return 0;
 }
 
 void initialize_root_directory() {
 
-	spblock.inode_bitmap[1]=1; //marking it with 0
+	spblock.inode_bitmap[1]=1; //Помечаем его с помощью 0
 	root = (filetype *) malloc (sizeof(filetype));
 
 	strcpy(root->path, "/");
@@ -243,6 +244,7 @@ filetype * filetype_from_path(char * path){
 		path_name = index+1;
 	}
 
+	return 0;
 }
 
 int find_free_inode(){
@@ -252,6 +254,8 @@ int find_free_inode(){
 		}
 		return i;
 	}
+
+	return 0;
 }
 
 int find_free_db(){
@@ -261,6 +265,8 @@ int find_free_db(){
 		}
 		return i;
 	}
+
+	return 0;
 }
 
 void add_child(filetype * parent, filetype * child){
@@ -271,7 +277,7 @@ void add_child(filetype * parent, filetype * child){
 	(parent -> children)[parent -> num_children - 1] = child;
 }
 
-static int mymkdir(const char *path, mode_t mode) {
+static int mymkdir(const char *path) {
 	printf("MKDIR\n");
 
 	int index = find_free_inode();
@@ -335,7 +341,7 @@ static int mymkdir(const char *path, mode_t mode) {
 }
 
 
-int myreaddir(const char *path, void *buffer, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi ){
+int myreaddir(const char *path, void *buffer, fuse_fill_dir_t filler){
 	printf("READDIR\n");
 
 	filler(buffer, ".", NULL, 0 );
@@ -373,10 +379,10 @@ static int mygetattr(const char *path, struct stat *statit) {
 	if(file_node == NULL)
 		return -ENOENT;
 
-	statit->st_uid = file_node -> user_id; // The owner of the file/directory is the user who mounted the filesystem
-	statit->st_gid = file_node -> group_id; // The group of the file/directory is the same as the group of the user who mounted the filesystem
-	statit->st_atime = file_node -> a_time; // The last "a"ccess of the file/directory is right now
-	statit->st_mtime = file_node -> m_time; // The last "m"odification of the file/directory is right now
+	statit->st_uid = file_node -> user_id; // Владельцем файла/каталога является пользователь, который смонтировал файловую систему
+	statit->st_gid = file_node -> group_id; // Группа файла/каталога совпадает с группой пользователя, который подключил файловую систему
+	statit->st_atime = file_node -> a_time; // Последний "a"-процесс файла/каталога находится прямо сейчас
+	statit->st_mtime = file_node -> m_time; // Последнее изменение "m" для файла/каталога происходит прямо сейчас
 	statit->st_ctime = file_node -> c_time;
 	statit->st_mode = file_node -> permissions;
 	statit->st_nlink = file_node -> num_links + file_node -> num_children;
@@ -494,7 +500,7 @@ int myrm(const char * path){
 }
 
 
-int mycreate(const char * path, mode_t mode, struct fuse_file_info *fi) {
+int mycreate(const char * path) {
 
 	printf("CREATEFILE\n");
 
@@ -556,18 +562,18 @@ int mycreate(const char * path, mode_t mode, struct fuse_file_info *fi) {
 }
 
 
-int myopen(const char *path, struct fuse_file_info *fi) {
+int myopen(const char *path) {
 	printf("OPEN\n");
 
 	char * pathname = malloc(sizeof(path)+1);
 	strcpy(pathname, path);
 
-	filetype * file = filetype_from_path(pathname);
+	//filetype * file = filetype_from_path(pathname);
 
 	return 0;
 }
 
-int myread(const char *path, char *buf, size_t size, off_t offset,struct fuse_file_info *fi) {
+int myread(const char *path, char *buf) {
 
 	printf("READ\n");
 
@@ -581,7 +587,7 @@ int myread(const char *path, char *buf, size_t size, off_t offset,struct fuse_fi
 	else{
 		char * str = malloc(sizeof(char)*1024*(file -> blocks));
 
-		printf(":%d:\n", file->size);
+		printf(":%ld:\n", file->size);
 		strcpy(str, "");
 		int i;
 		for(i = 0; i < (file -> blocks) - 1; i++){
@@ -596,7 +602,7 @@ int myread(const char *path, char *buf, size_t size, off_t offset,struct fuse_fi
 	return file->size;
 }
 
-int myaccess(const char * path, int mask){
+int myaccess(){
 	return 0;
 }
 
@@ -638,11 +644,11 @@ int myrename(const char* from, const char* to) {
 	return 0;
 }
 
-int mytruncate(const char *path, off_t size) {
+int mytruncate() {
 	return 0;
 }
 
-int mywrite(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+int mywrite(const char *path, const char *buf) {
 
 	printf("WRITING\n");
 
@@ -653,7 +659,7 @@ int mywrite(const char *path, const char *buf, size_t size, off_t offset, struct
 	if(file == NULL)
 		return -ENOENT;
 
-	int indexno = (file->blocks)-1;
+	//int indexno = (file->blocks)-1;
 
 	if(file -> size == 0){
 		strcpy(&spblock.datablocks[block_size*((file -> datablocks)[0])], buf);
@@ -663,7 +669,7 @@ int mywrite(const char *path, const char *buf, size_t size, off_t offset, struct
 	else{
 		int currblk = (file->blocks)-1;
 		int len1 = 1024 - (file -> size % 1024);
-		if(len1 >= strlen(buf)){
+		if(len1 >= (int)strlen(buf)){
 			strcat(&spblock.datablocks[block_size*((file -> datablocks)[currblk])], buf);
 			file -> size += strlen(buf);
 			printf("---> %s\n", &spblock.datablocks[block_size*((file -> datablocks)[currblk])]);
@@ -729,5 +735,6 @@ int main( int argc, char *argv[] ) {
 		initialize_root_directory();
 	}
 
+	
 	return fuse_main(argc, argv, &operations, NULL);
 }
